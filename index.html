@@ -91,6 +91,7 @@ h1,h2,h3{font-family:var(--fd);margin:0;line-height:1.15;text-wrap:balance}
 .list button{display:block;width:100%;text-align:left;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;margin:8px 0}.list button small{display:block;color:var(--muted);font-size:12px}
 .hidden{display:none}
 @media(max-width:420px){.top .brand small{display:none}.xp .lbl span:last-child{display:none}}
+body:before{content:"";position:fixed;top:0;left:0;right:0;height:var(--sat);background:var(--bg);z-index:10;pointer-events:none}
 </style>
 </head>
 <body>
@@ -100,14 +101,23 @@ h1,h2,h3{font-family:var(--fd);margin:0;line-height:1.15;text-wrap:balance}
 <script>
 /* ===================== ÉTAT ===================== */
 const $=s=>document.querySelector(s),app=$('#app');
+const TOTALQ=[...Array(14)].reduce((a,_,i)=>a+L[i+1].q.length,0);
 const RANKS=[[0,'Apprenti'],[300,'Aide-monteur'],[800,'Monteur de réseau'],[1600,'Chef d\'équipe'],[2800,'Spécialiste de réseau'],[4200,'Maître mesureur'],[6000,'Légende du candélabre']];
 const FOES=['👾','🦇','🐙','🤖','👻','🐍','🦂','🧟','🦖','🕷️','🐉','🧌','🦑','👹'];
 const BOSSES=[['🧙','Le Métrologue fou'],['⚡','Le Gardien de la cabine'],['🌩️','Le Seigneur du court-circuit'],['🐍','L\'Hydre des câbles'],['👑','Le Roi Candélabre']];
 const FOENAMES=['Parasite','Ohm noir','Glitch','Déphaseur','Court-jus','Saturator','Wattvore','Boucleur','Harmonix','Fuiteur','Tore-tordu','Câblofurax','Fantôme du sol','Candélabre'];
-let S={xp:0,coins:0,done:{},boss:{},sr:{},streak:{last:'',n:0},day:{d:'',n:0},free:false,pot:0};
+let S={xp:0,coins:0,done:{},boss:{},sr:{},streak:{last:'',n:0},day:{d:'',n:0},free:false,pot:0,notif:{on:true,h:19,m:30}};
 try{S=Object.assign(S,JSON.parse(localStorage.getItem('mq2')||'{}'))}catch(e){}
 const save=()=>{try{localStorage.setItem('mq2',JSON.stringify(S))}catch(e){}};
 const today=()=>new Date().toISOString().slice(0,10);
+/* Pont vers l'app iOS native. Absent dans Safari et dans la PWA : tout le code appelant doit rester inoffensif sans lui. */
+const BRIDGE=(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.rappels)||null;
+window.bilanRappels=(n,quand)=>{const fb=document.querySelector('#nfb');if(!fb)return;
+if(quand==='refus'){fb.style.color='var(--bad)';fb.textContent='Notifications refusées. Autorise-les dans Réglages > Mesure Quest.';return}
+if(quand==='desactive'){fb.style.color='var(--muted)';fb.textContent='Rappels désactivés.';return}
+const d=new Date(quand);fb.style.color='var(--ok)';
+fb.textContent=n+' rappels programmés. Le prochain '+d.toLocaleString('fr-CH',{weekday:'long',hour:'2-digit',minute:'2-digit'})+'.'};
+function pushRappels(){if(!BRIDGE)return;try{BRIDGE.postMessage({on:!!S.notif.on,hour:S.notif.h,minute:S.notif.m,due:dueQ().length,streak:S.streak.n,jamaisVues:Math.max(0,TOTALQ-Object.keys(S.sr).length)})}catch(e){}}
 const dayN=d=>Math.floor(new Date(d).getTime()/864e5);
 const rank=()=>{let r=RANKS[0];for(const x of RANKS)if(S.xp>=x[0])r=x;const i=RANKS.indexOf(r),nx=RANKS[i+1];return{name:r[1],pct:nx?Math.min(100,(S.xp-r[0])/(nx[0]-r[0])*100):100,nx}};
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
@@ -187,7 +197,7 @@ if(q.t==='match'){const draw=()=>{$('#mt').innerHTML=st.l.map((y,k)=>`<button cl
 const result=win=>{const n=res.filter(Boolean).length;let st=0;if(win){st=miss.length===0?3:miss.length===1?2:1}
 if(!win){xp=Math.round(xp/2);coins=Math.round(coins/2)}S.xp+=xp;S.coins+=coins;
 if(win){if(isBoss){S.boss[w]=true}else{const p=S.done[o.li],pct=n/qs.length;S.done[o.li]={st:Math.max(st,p?p.st:0),best:Math.max(n,p?p.best:0),tot:qs.length,pct:Math.max(Math.round(pct*100),p&&p.pct?p.pct:0)}}}save();
-const missHtml=miss.length?`<div class="miss"><div class="eyebrow">À retenir (ces questions reviendront en révision)</div>${miss.map(x=>`<div><b>${x.q.q}</b>${x.q.e}</div>`).join('')}</div>`:'';
+pushRappels();const missHtml=miss.length?`<div class="miss"><div class="eyebrow">À retenir (ces questions reviendront en révision)</div>${miss.map(x=>`<div><b>${x.q.q}</b>${x.q.e}</div>`).join('')}</div>`:'';
 app.innerHTML=hud()+`<div class="card res"><div class="big">${win?(isBoss?'🏆':st===3?'🌟':'⭐'):'💀'}</div><h2>${win?(isBoss?'Boss vaincu !':'Niveau terminé'):'Défaite…'}</h2>${win&&!isBoss?`<div class="stars">${stars(st)}</div>`:''}<p>${n} / ${qs.length} bonnes réponses${win?'':' · Tu gardes la moitié des gains. Relis, puis retente.'}</p><div class="gain"><span class="pill">+${xp} XP</span><span class="pill">+${coins} 🪙</span>${win&&isBoss&&w<4?`<span class="pill" style="color:var(--ok)">Monde ${w+2} ouvert</span>`:''}</div>${missHtml}
 <div class="nav" style="justify-content:center;flex-wrap:wrap"><button class="btn ghost" id="again">↻ Rejouer</button><button class="btn" id="ok">${isBoss?'Carte des mondes':'Monde '+(w+1)+' →'}</button></div></div>`;
 $('#again').onclick=()=>fight(o);$('#ok').onclick=()=>isBoss?home():world(w)};show()}
@@ -218,7 +228,7 @@ if(q.t==='num'){const go=()=>{const v=parseFloat($('#nin').value.replace(',','.'
 if(q.t==='order'){const draw=()=>{$('#ord').innerHTML=st.items.map((it,k)=>{const p=st.pick.indexOf(it);return `<button class="opt${p>=0?' sel':''}" data-k="${k}"><span class="n">${p>=0?p+1:'·'}</span>${it}</button>`}).join('');app.querySelectorAll('#ord .opt').forEach(b=>b.onclick=()=>{const it=st.items[+b.dataset.k];if(st.pick.includes(it))return;st.pick.push(it);if(st.pick.length===q.i.length){const ok=st.pick.every((y,k)=>y===q.i[k]);draw();answer(ok,ok?'':'Bon ordre : '+q.i.map((y,k)=>(k+1)+'. '+y).join(' '))}else draw()})};draw()}
 if(q.t==='match'){const draw=()=>{$('#mt').innerHTML=st.l.map((y,k)=>`<button class="opt${st.sel===y?' sel':''}${st.pairs[y]?' paired':''}" data-s="l" data-v="${k}">${y}</button><button class="opt${Object.values(st.pairs).includes(st.r[k])?' paired':''}" data-s="r" data-v="${k}">${st.r[k]}</button>`).join('');app.querySelectorAll('#mt .opt').forEach(b=>b.onclick=()=>{const v=b.dataset.s==='l'?st.l[+b.dataset.v]:st.r[+b.dataset.v];if(b.dataset.s==='l'){if(st.pairs[v])return;st.sel=v;draw()}else if(st.sel){if(Object.values(st.pairs).includes(v))return;st.pairs[st.sel]=v;st.sel=null;if(Object.keys(st.pairs).length===q.p.length){const ok=q.p.every(p=>st.pairs[p[0]]===p[1]);draw();answer(ok,ok?'':'Paires : '+q.p.map(p=>p[0]+' → '+p[1]).join(' · '))}else draw()}})};draw()}};
 const done=()=>{const n=res.filter(Boolean).length,pct=Math.round(n/list.length*100);S.coins+=n;save();
-app.innerHTML=hud()+`<div class="card res"><div class="big">${pct>=80?'🧠':pct>=50?'📈':'🔁'}</div><h2>${title}</h2><p>${n} / ${list.length} · ${pct} %</p><div class="gain"><span class="pill">+${xp} XP</span><span class="pill">+${n} 🪙</span></div>${miss.length?`<div class="miss"><div class="eyebrow">À revoir demain</div>${miss.map(x=>`<div><b>${x.q.q}</b>${x.q.e}</div>`).join('')}</div>`:'<p>Sans faute. Les intervalles s\'allongent.</p>'}<div class="nav" style="justify-content:center"><button class="btn" id="ok">Retour</button></div></div>`;$('#ok').onclick=train};show()}
+pushRappels();app.innerHTML=hud()+`<div class="card res"><div class="big">${pct>=80?'🧠':pct>=50?'📈':'🔁'}</div><h2>${title}</h2><p>${n} / ${list.length} · ${pct} %</p><div class="gain"><span class="pill">+${xp} XP</span><span class="pill">+${n} 🪙</span></div>${miss.length?`<div class="miss"><div class="eyebrow">À revoir demain</div>${miss.map(x=>`<div><b>${x.q.q}</b>${x.q.e}</div>`).join('')}</div>`:'<p>Sans faute. Les intervalles s\'allongent.</p>'}<div class="nav" style="justify-content:center"><button class="btn" id="ok">Retour</button></div></div>`;$('#ok').onclick=train};show()}
 /* ===================== CODEX ===================== */
 function codex(){tab='codex';tabs();app.innerHTML=hud()+`<div class="hero"><h1>📖 <b>Codex</b></h1><p>Tous les briefings et labos des chapitres ouverts, à relire à tout moment. Ferme les yeux et récite avant de rouvrir.</p></div><div class="list">`
 +W.map((w,wi)=>`<div class="eyebrow" style="color:${w.c};margin-top:14px">Monde ${wi+1} · ${w.n}</div>`+w.l.map(li=>{const op=S.free||lvlOpen(li);return `<button ${op?'':'disabled'} data-l="${li}" style="${op?'':'opacity:.4'}">${L[li].t}<small>${L[li].b.map(b=>b.h).join(' · ')}</small></button>`}).join('')).join('')+'</div>';
@@ -227,16 +237,23 @@ app.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>brief(+b.dataset.l,0,t
 function profile(){tab='me';tabs();const r=rank(),tot=Object.values(S.done).reduce((a,b)=>a+b.st,0),all=allQ(),seen=Object.keys(S.sr).length;
 const stand=window.navigator.standalone||matchMedia('(display-mode: standalone)').matches;
 app.innerHTML=hud()+`<div class="hero"><h1>🏅 <b>${r.name}</b></h1><p>${S.xp} XP · ${tot} / 42 étoiles · série de ${S.streak.n} jour${S.streak.n>1?'s':''}</p></div>
-<div class="grid2"><div class="stat"><small>Questions vues</small><span>${seen} / 133</span></div><div class="stat"><small>Maîtrisées</small><span style="color:var(--ok)">${all.filter(x=>x.r&&x.r.iv>=21).length}</span></div><div class="stat"><small>Pièces</small><span>🪙 ${S.coins}</span></div><div class="stat"><small>Boss vaincus</small><span>${Object.keys(S.boss).length} / 5</span></div></div>
+<div class="grid2"><div class="stat"><small>Questions vues</small><span>${seen} / ${TOTALQ}</span></div><div class="stat"><small>Maîtrisées</small><span style="color:var(--ok)">${all.filter(x=>x.r&&x.r.iv>=21).length}</span></div><div class="stat"><small>Pièces</small><span>🪙 ${S.coins}</span></div><div class="stat"><small>Boss vaincus</small><span>${Object.keys(S.boss).length} / 5</span></div></div>
 <div class="card"><div class="eyebrow">Trophées</div>${BOSSES.map((b,i)=>`<span class="badge${S.boss[i]?' on':''}" title="${b[1]}">${b[0]}</span>`).join('')}<span class="badge${S.streak.n>=7?' on':''}">🔥</span><span class="badge${tot>=42?' on':''}">🌟</span><span class="badge${S.xp>=4200?' on':''}">🎓</span></div>
 <div class="card"><div class="eyebrow">Chapitres</div>${[...Array(14)].map((_,i)=>{const li=i+1,d=S.done[li],qs=L[li].q.length,w=all.filter(x=>x.li===li&&x.r&&x.r.f>0&&x.r.n<3).length;return `<div style="display:flex;justify-content:space-between;font-size:13.5px;padding:5px 0;border-bottom:1px solid var(--line)"><span>${li}. ${L[li].t}</span><span class="mono">${d?stars(d.st)+' '+(d.pct!=null?d.pct+'%':d.best+'/'+(d.tot||qs)):'—'}${w?' <span class="warn">'+w+' fragile'+(w>1?'s':'')+'</span>':''}</span></div>`}).join('')}</div>
-${stand?'':`<div class="tip">📱 <b>Installer sur l'iPhone :</b> dans Safari, touche Partager puis « Sur l'écran d'accueil ». Le jeu s'ouvre plein écran et marche hors ligne.</div>`}
+${BRIDGE?`<div class="card"><div class="eyebrow">🔔 Rappel quotidien</div><p style="color:var(--muted);font-size:14px;margin:0 0 10px">Une notification par jour, à l'heure que tu choisis, tant qu'il te reste des questions à réviser.</p>
+<label style="display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:15px"><span>Activer</span><input type="checkbox" id="non" ${S.notif.on?'checked':''} style="width:24px;height:24px;accent-color:var(--amber)"></label>
+<label style="display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:15px;margin-top:12px"><span>Heure</span><input type="time" id="nheure" value="${String(S.notif.h).padStart(2,'0')}:${String(S.notif.m).padStart(2,'0')}" style="font:600 17px var(--fm);background:#0a0f1a;color:var(--amber2);border:1px solid var(--line);border-radius:8px;padding:8px 12px"></label>
+<p id="nfb" style="font-size:13px;color:var(--ok);margin:10px 0 0;min-height:18px"></p></div>`
+:`<div class="tip">📱 <b>Installer sur l'iPhone :</b> dans Safari, touche Partager puis « Sur l'écran d'accueil ». Le jeu s'ouvre plein écran et marche hors ligne.</div>`}
 <div class="foot"><button id="exp">Exporter la progression</button><button id="imp">Importer</button><button id="reset">Réinitialiser</button></div>`;
+if(BRIDGE){pushRappels();const fb=$('#nfb');const maj=()=>{save();pushRappels();fb.textContent=S.notif.on?'Rappel réglé à '+String(S.notif.h).padStart(2,'0')+'h'+String(S.notif.m).padStart(2,'0')+'.':'Rappels désactivés.'};
+$('#non').onchange=e=>{S.notif.on=e.target.checked;maj()};
+$('#nheure').onchange=e=>{const v=(e.target.value||'19:30').split(':');S.notif.h=+v[0];S.notif.m=+v[1];maj()}}
 $('#exp').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(JSON.stringify(S));prompt('Copie ce texte pour le sauvegarder :',JSON.stringify(S))};
 $('#imp').onclick=()=>{const v=prompt('Colle ta sauvegarde :');if(!v)return;try{S=Object.assign(S,JSON.parse(v));save();profile()}catch(e){alert('Sauvegarde illisible.')}};
 $('#reset').onclick=()=>{if(confirm('Tout effacer ? XP, étoiles, mémoire de révision.')){localStorage.removeItem('mq2');location.reload()}}}
 /* ===================== DÉMARRAGE ===================== */
-touchStreak();home();
+touchStreak();home();pushRappels();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
