@@ -470,3 +470,46 @@ L[13].q.push(
 L[14].q.push(
 {t:'qcm',q:'Résistance interne du réseau (L-N) sur un circuit d\'éclairage public : quelle recommandation ?',c:['≤ ±10 % de l\'impédance de boucle','≤ 0,5 Ω','≤ 1 MΩ','≤ 100 V'],a:0,e:'Contrôle fonctionnel : la résistance interne du réseau L-N doit rester dans ±10 % de l\'impédance de boucle. C\'est une recommandation de l\'ESTI 244.'},
 {t:'qcm',q:'Résistance d\'isolement exigée pour une installation d\'éclairage public complète ?',c:['1 MΩ','2 MΩ','0,5 MΩ','50 MΩ'],a:0,e:'Installation d\'éclairage totale : 1 MΩ. Chaque luminaire pris séparément : 2 MΩ à 500 V CC selon EN 60598-1.'});
+
+/* ===================== AUDIT D'EXACTITUDE : corrections ===================== */
+(()=>{
+// Erreur reelle : le support ecrit « un courant continu est augmente jusqu'a ce qu'un
+// claquage se produise ». La bonne option n'existait meme pas parmi les propositions.
+const q=L[12].q.find(x=>x.q.includes('oscillation couplée'));
+if(!q)throw new Error('question oscillation introuvable');
+q.c=['Un courant continu','Une fréquence','Un courant alternatif','Une impulsion acoustique'];q.a=0;
+q.e='Le support dit : « un courant continu est augmenté jusqu\'à ce qu\'un claquage se produise au point du défaut ». L\'onde de réflexion, mesurée aux deux extrémités, donne la distance. Erreur d\'environ 5 %.';
+// Trois doublons que le detecteur de similarite avait laisses passer.
+const drop=(ch,txt)=>{const i=L[ch].q.findIndex(x=>x.q===txt);if(i<0)throw new Error('introuvable L'+ch+' : '+txt);L[ch].q.splice(i,1)};
+drop(2,'L\'appareil électrodynamique est idéal pour mesurer :');
+drop(3,'La valeur moyenne d\'un signal purement alternatif est nulle.');
+drop(12,'Un parafoudre non séparé pendant une localisation par choc :');
+// Unite vide : l'affichage montrait « 0.66  » avec un blanc apres le nombre.
+const k=L[14].q.find(x=>x.q.includes('Coefficient de sécurité'));if(k)k.u='(sans unité)';
+})();
+
+/* Deux laboratoires heritees de la v1 enseignaient un resultat faux. */
+
+// Le tableau du support donne Rb = 0,07 Ω pour 10 m de 2,5 mm² (1,75 VA a 5 A).
+// Le labo doublait la longueur et affichait 0,14 Ω et 3,50 VA pour ces memes 10 m.
+// La formule du support est Rb = δ × l / A, sans facteur deux : l est deja la
+// longueur de ligne. Corrige, le labo reproduit exactement le tableau du cours.
+LAB.ti.out=s=>{const K=s.i1/s.i2,Rb=0.0175*s.l/2.5,S=s.i2*s.i2*Rb;
+return `<div class="read"><div><small>Rapport K</small><span>${K}</span></div><div><small>Rb = δ · l / A</small><span>${Rb.toFixed(3)} Ω</span></div><div><small>Puissance requise S = I² · Rb</small><span>${S.toFixed(2)} VA</span></div></div><p style="font-size:14px;color:var(--muted);margin:8px 0 0">δ vaut 0,0175 pour le cuivre. À 1 A secondaire, la ligne consomme 25 fois moins qu'à 5 A : c'est pour ça que les longues lignes de mesure préfèrent 1 A.</p>`};
+
+// Un testeur bipolaire mesure la boucle aller-retour. Un / Zs donne donc le courant
+// de defaut de cette boucle, c'est-a-dire Ik1 unipolaire, et non Ik3 comme l'affichait
+// le labo. Le support pose Ik1 = 50 % de Ik3 : le tripolaire vaut donc le double.
+LAB.ik.out=s=>{const Zs=s.ud/s.im,Ik1=230/Zs,Ik3=Ik1*2;
+return `<div class="read"><div><small>Zs = Ud / Im</small><span>${Zs.toFixed(3)} Ω</span></div><div><small>Ik1 mesuré = Un / Zs</small><span>${Math.round(Ik1)} A</span></div><div><small>Ik3 tripolaire (Ik1 ×2)</small><span>${Math.round(Ik3)} A</span></div><div><small>Ik2 biphasé (86 % de Ik3)</small><span>${Math.round(Ik3*.86)} A</span></div></div><p style="font-size:14px;color:var(--muted);margin:8px 0 0">${Zs<0.05?'<span class="warn">Impédance très faible : un testeur à 10 A verrait une chute de quelques dizaines de millivolts, difficile à interpréter. Il faut un appareil à fort courant de mesure.</span>':'L\'appareil mesure une <b>boucle</b> : ce que tu lis directement est le court-circuit <b>unipolaire</b>. Le tripolaire, lui, vaut le double. La charge ne dure que 5 à 10 ms, pour ne pas faire réagir la protection amont.'}</p>`};
+
+/* Deux formulations recalees sur le texte exact du support. */
+(()=>{
+// Le support ecrit « 45 - 65 Hz », pas 50 Hz.
+const b1=L[10].b.find(b=>b.p.some(p=>p.includes('2 × U0 à 50 Hz')));
+if(b1)b1.p=b1.p.map(p=>p.replace('2 × U0 à 50 Hz','2 × U0 entre 45 et 65 Hz'));
+// « cause n° 1 des retards » etait une formule de ma part. Le support dit
+// seulement que l'acces au coffret entraine souvent des retards massifs.
+const b2=L[12].b.find(b=>b.k&&b.k.includes('cause n° 1'));
+if(b2)b2.k='Prévoir à l\'avance une procédure d\'accès aux coffrets (serrurier, police). Le support insiste : l\'accès au coffret de raccordement n\'est pas toujours garanti, et cela entraîne souvent des <b>retards massifs</b>.';
+})();
