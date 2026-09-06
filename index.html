@@ -102,11 +102,12 @@ body:before{content:"";position:fixed;top:0;left:0;right:0;height:var(--sat);bac
 /* ===================== ÉTAT ===================== */
 const $=s=>document.querySelector(s),app=$('#app');
 const TOTALQ=[...Array(14)].reduce((a,_,i)=>a+L[i+1].q.length,0);
+const NCH=L.length-1;const TOTETOILES=NCH*3;
 const RANKS=[[0,'Apprenti'],[300,'Aide-monteur'],[800,'Monteur de réseau'],[1600,'Chef d\'équipe'],[2800,'Spécialiste de réseau'],[4200,'Maître mesureur'],[6000,'Légende du candélabre']];
 const FOES=['👾','🦇','🐙','🤖','👻','🐍','🦂','🧟','🦖','🕷️','🐉','🧌','🦑','👹'];
 const BOSSES=[['🧙','Le Métrologue fou'],['⚡','Le Gardien de la cabine'],['🌩️','Le Seigneur du court-circuit'],['🐍','L\'Hydre des câbles'],['👑','Le Roi Candélabre']];
 const FOENAMES=['Parasite','Ohm noir','Glitch','Déphaseur','Court-jus','Saturator','Wattvore','Boucleur','Harmonix','Fuiteur','Tore-tordu','Câblofurax','Fantôme du sol','Candélabre'];
-let S={xp:0,coins:0,done:{},boss:{},sr:{},streak:{last:'',n:0},day:{d:'',n:0},free:false,pot:0,notif:{on:true,h:19,m:30}};
+let S={xp:0,coins:0,done:{},boss:{},sr:{},fr:{},streak:{last:'',n:0},day:{d:'',n:0},free:false,pot:0,notif:{on:true,h:19,m:30}};
 try{S=Object.assign(S,JSON.parse(localStorage.getItem('mq2')||'{}'))}catch(e){}
 const save=()=>{try{localStorage.setItem('mq2',JSON.stringify(S))}catch(e){}};
 const today=()=>new Date().toISOString().slice(0,10);
@@ -209,8 +210,9 @@ app.innerHTML=hud()+`<div class="hero"><h1>🧠 <b>Réviser</b> au bon moment</h
 ${due.length?`<div style="height:12px"></div><button class="btn wide cy" id="go">Lancer la session (${Math.min(due.length,15)} questions)</button>`:`<div class="tip" style="margin-top:12px">✅ Rien à réviser. ${nxt?'Prochaine question due dans '+(nxt.r.due-t)+' jour'+(nxt.r.due-t>1?'s':'')+'.':''} ${neu?'Il reste '+neu+' questions jamais vues : va conquérir des niveaux.':''}</div>`}
 ${frag?`<div style="height:8px"></div><button class="btn wide ghost" id="frag">🎯 Travailler mes ${Math.min(frag,10)} points fragiles</button>`:''}
 <div style="height:8px"></div><button class="btn wide ghost" id="mix">🎲 Examen blanc : 15 questions mélangées</button>
+${(()=>{const fd=frDue();return fd.length?`<div style="height:8px"></div><button class="btn wide ghost" id="recite">🗣️ Rappel libre : réciter ${Math.min(fd.length,5)} briefing${fd.length>1?'s':''}</button>`:''})()}
 <div class="tip" style="margin-top:14px"><b>Pourquoi ça marche :</b> tester sa mémoire (au lieu de relire) et espacer les rappels sont les deux techniques les mieux validées par la recherche (Dunlosky 2013, Roediger et Karpicke 2006). Mélanger les chapitres (interleaving) prépare mieux à l'examen qu'un chapitre à la fois.</div>`;
-const g=$('#go');if(g)g.onclick=()=>session(due.slice(0,15),'Révision du jour');const f=$('#frag');if(f)f.onclick=()=>session(shuffle(all.filter(x=>x.r&&x.r.f>0&&x.r.n<3)).slice(0,10),'Points fragiles');$('#mix').onclick=()=>session(shuffle(all).slice(0,15),'Examen blanc')}
+const g=$('#go');if(g)g.onclick=()=>session(due.slice(0,15),'Révision du jour');const f=$('#frag');if(f)f.onclick=()=>session(shuffle(all.filter(x=>x.r&&x.r.f>0&&x.r.n<3)).slice(0,10),'Points fragiles');$('#mix').onclick=()=>session(shuffle(all).slice(0,15),'Examen blanc');const rc=$('#recite');if(rc)rc.onclick=()=>recite(frDue().slice(0,5))}
 function session(list,title){if(!list.length){train();return}touchStreak();tabs();let i=0,xp=0;const res=[],miss=[];
 const show=()=>{const x=list[i],q=x.q;let body='',st={};
 if(q.t==='qcm')body=`<div class="opts">${q.c.map((c,k)=>`<button class="opt" data-k="${k}"><span class="k">${'ABCD'[k]}</span>${c}</button>`).join('')}</div>`;
@@ -229,6 +231,23 @@ if(q.t==='order'){const draw=()=>{$('#ord').innerHTML=st.items.map((it,k)=>{cons
 if(q.t==='match'){const draw=()=>{$('#mt').innerHTML=st.l.map((y,k)=>`<button class="opt${st.sel===y?' sel':''}${st.pairs[y]?' paired':''}" data-s="l" data-v="${k}">${y}</button><button class="opt${Object.values(st.pairs).includes(st.r[k])?' paired':''}" data-s="r" data-v="${k}">${st.r[k]}</button>`).join('');app.querySelectorAll('#mt .opt').forEach(b=>b.onclick=()=>{const v=b.dataset.s==='l'?st.l[+b.dataset.v]:st.r[+b.dataset.v];if(b.dataset.s==='l'){if(st.pairs[v])return;st.sel=v;draw()}else if(st.sel){if(Object.values(st.pairs).includes(v))return;st.pairs[st.sel]=v;st.sel=null;if(Object.keys(st.pairs).length===q.p.length){const ok=q.p.every(p=>st.pairs[p[0]]===p[1]);draw();answer(ok,ok?'':'Paires : '+q.p.map(p=>p[0]+' → '+p[1]).join(' · '))}else draw()}})};draw()}};
 const done=()=>{const n=res.filter(Boolean).length,pct=Math.round(n/list.length*100);S.coins+=n;save();
 pushRappels();app.innerHTML=hud()+`<div class="card res"><div class="big">${pct>=80?'🧠':pct>=50?'📈':'🔁'}</div><h2>${title}</h2><p>${n} / ${list.length} · ${pct} %</p><div class="gain"><span class="pill">+${xp} XP</span><span class="pill">+${n} 🪙</span></div>${miss.length?`<div class="miss"><div class="eyebrow">À revoir demain</div>${miss.map(x=>`<div><b>${x.q.q}</b>${x.q.e}</div>`).join('')}</div>`:'<p>Sans faute. Les intervalles s\'allongent.</p>'}<div class="nav" style="justify-content:center"><button class="btn" id="ok">Retour</button></div></div>`;$('#ok').onclick=train};show()}
+
+/* ===================== RAPPEL LIBRE ===================== */
+// Briefings a reciter : chapitres deja joues, jamais recites ou dont l'echeance est passee.
+function frDue(){const t=dayN(today()),o=[];for(let li=1;li<=NCH;li++){if(!(S.free||S.done[li]))continue;L[li].b.forEach((b,idx)=>{const r=S.fr[li+'.'+idx];if(!r||r.due<=t)o.push({li,idx,r})})}return shuffle(o.filter(x=>!x.r)).concat(o.filter(x=>x.r).sort((a,b)=>a.r.due-b.r.due))}
+// On dit ce qu'on sait AVANT de relire : la recherche en memoire sans indice ancre plus
+// profondement que la reconnaissance d'un QCM. Auto-evaluation honnete, puis espacement.
+function recite(list){if(!list.length){train();return}touchStreak();tabs();let i=0;const res=[];
+const show=()=>{const x=list[i],l=L[x.li],b=l.b[x.idx];
+app.innerHTML=hud()+`<div class="card slide"><div class="eyebrow">Rappel libre ${i+1} / ${list.length} · chapitre ${x.li}</div><h2>${b.h}</h2><p style="color:var(--muted)">${l.t}</p>
+<div class="tip"><b>Ferme les yeux.</b> Dis à voix haute, ou écris sur un papier, tout ce que tu sais sur ce point : définitions, chiffres, formules, ordre des étapes. Prends trente secondes. Ensuite seulement, révèle.</div>
+<div id="rev"><button class="btn wide" id="show">👁️ Révéler le briefing</button></div>
+<div class="nav"><button class="btn ghost" id="quit" style="font-size:13px;padding:8px 12px">✕ Arrêter</button></div></div>`;
+$('#quit').onclick=train;
+$('#show').onclick=()=>{$('#rev').innerHTML=b.p.map(p=>`<p>${p}</p>`).join('')+(b.k?`<div class="key">${b.k}</div>`:'')+`<div class="eyebrow" style="margin-top:14px">Honnêtement, tu avais l'essentiel ?</div><div class="nav" style="justify-content:space-between"><button class="btn ghost" id="no">🔁 Non, à revoir</button><button class="btn" id="yes">✅ Oui, je savais</button></div>`;
+const grade=ok=>{const key=x.li+'.'+x.idx,t=dayN(today()),r=S.fr[key]||{n:0,iv:0,due:0};if(ok){r.n++;r.iv=r.n===1?2:r.n===2?5:Math.round(r.iv*2.2);S.xp+=8}else{r.n=0;r.iv=1}r.due=t+r.iv;S.fr[key]=r;res.push(ok);save();i++;i<list.length?show():done()};
+$('#no').onclick=()=>grade(false);$('#yes').onclick=()=>grade(true);$('#rev').scrollIntoView({block:'start',behavior:'smooth'})}};
+const done=()=>{const n=res.filter(Boolean).length;app.innerHTML=hud()+`<div class="card res"><div class="big">${n===res.length?'🧠':'📈'}</div><h2>Rappel libre</h2><p>${n} / ${res.length} briefings sus. +${n*8} XP</p><p style="color:var(--muted);font-size:14px">Ceux que tu ne savais pas reviennent demain. Les autres s'espacent.</p><div class="nav" style="justify-content:center"><button class="btn" id="ok">Retour</button></div></div>`;$('#ok').onclick=train};show()}
 /* ===================== CODEX ===================== */
 function codex(){tab='codex';tabs();app.innerHTML=hud()+`<div class="hero"><h1>📖 <b>Codex</b></h1><p>Tous les briefings et labos des chapitres ouverts, à relire à tout moment. Ferme les yeux et récite avant de rouvrir.</p></div><div class="list">`
 +W.map((w,wi)=>`<div class="eyebrow" style="color:${w.c};margin-top:14px">Monde ${wi+1} · ${w.n}</div>`+w.l.map(li=>{const op=S.free||lvlOpen(li);return `<button ${op?'':'disabled'} data-l="${li}" style="${op?'':'opacity:.4'}">${L[li].t}<small>${L[li].b.map(b=>b.h).join(' · ')}</small></button>`}).join('')).join('')+'</div>';
@@ -238,6 +257,7 @@ function profile(){tab='me';tabs();const r=rank(),tot=Object.values(S.done).redu
 const stand=window.navigator.standalone||matchMedia('(display-mode: standalone)').matches;
 app.innerHTML=hud()+`<div class="hero"><h1>🏅 <b>${r.name}</b></h1><p>${S.xp} XP · ${tot} / 42 étoiles · série de ${S.streak.n} jour${S.streak.n>1?'s':''}</p></div>
 <div class="grid2"><div class="stat"><small>Questions vues</small><span>${seen} / ${TOTALQ}</span></div><div class="stat"><small>Maîtrisées</small><span style="color:var(--ok)">${all.filter(x=>x.r&&x.r.iv>=21).length}</span></div><div class="stat"><small>Pièces</small><span>🪙 ${S.coins}</span></div><div class="stat"><small>Boss vaincus</small><span>${Object.keys(S.boss).length} / 5</span></div></div>
+<div class="card"><div class="eyebrow">👥 Ma classe</div><p style="color:var(--muted);font-size:14px;margin:6px 0 10px">${S.classe&&S.classe.code?`Classe <b class="mono" style="letter-spacing:2px">${S.classe.code}</b>, pseudo <b>${S.classe.pseudo}</b>.`:`Rejoins tes camarades avec un code à six lettres et comparez votre progression.`}</p><button class="btn wide ghost" id="classe">${S.classe&&S.classe.code?`Voir le classement`:`Rejoindre ou créer une classe`}</button></div>
 <div class="card"><div class="eyebrow">Trophées</div>${BOSSES.map((b,i)=>`<span class="badge${S.boss[i]?' on':''}" title="${b[1]}">${b[0]}</span>`).join('')}<span class="badge${S.streak.n>=7?' on':''}">🔥</span><span class="badge${tot>=42?' on':''}">🌟</span><span class="badge${S.xp>=4200?' on':''}">🎓</span></div>
 <div class="card"><div class="eyebrow">Chapitres</div>${[...Array(14)].map((_,i)=>{const li=i+1,d=S.done[li],qs=L[li].q.length,w=all.filter(x=>x.li===li&&x.r&&x.r.f>0&&x.r.n<3).length;return `<div style="display:flex;justify-content:space-between;font-size:13.5px;padding:5px 0;border-bottom:1px solid var(--line)"><span>${li}. ${L[li].t}</span><span class="mono">${d?stars(d.st)+' '+(d.pct!=null?d.pct+'%':d.best+'/'+(d.tot||qs)):'—'}${w?' <span class="warn">'+w+' fragile'+(w>1?'s':'')+'</span>':''}</span></div>`}).join('')}</div>
 ${BRIDGE?`<div class="card"><div class="eyebrow">🔔 Rappel quotidien</div><p style="color:var(--muted);font-size:14px;margin:0 0 10px">Une notification par jour, à l'heure que tu choisis, tant qu'il te reste des questions à réviser.</p>
@@ -251,10 +271,11 @@ $('#non').onchange=e=>{S.notif.on=e.target.checked;maj()};
 $('#nheure').onchange=e=>{const v=(e.target.value||'19:30').split(':');S.notif.h=+v[0];S.notif.m=+v[1];maj()}}
 $('#exp').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(JSON.stringify(S));prompt('Copie ce texte pour le sauvegarder :',JSON.stringify(S))};
 $('#imp').onclick=()=>{const v=prompt('Colle ta sauvegarde :');if(!v)return;try{S=Object.assign(S,JSON.parse(v));save();profile()}catch(e){alert('Sauvegarde illisible.')}};
-$('#reset').onclick=()=>{if(confirm('Tout effacer ? XP, étoiles, mémoire de révision.')){localStorage.removeItem('mq2');location.reload()}}}
+$('#reset').onclick=()=>{if(confirm('Tout effacer ? XP, étoiles, mémoire de révision.')){localStorage.removeItem('mq2');location.reload()}};const cb=$('#classe');if(cb)cb.onclick=()=>classe()}
 /* ===================== DÉMARRAGE ===================== */
 touchStreak();home();pushRappels();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
+<script src="classe.js"></script>
 </body>
 </html>
