@@ -143,10 +143,10 @@ function hud(){const r=rank();return `<div class="top"><div class="brand">Mesure
 /* ===================== CARTE DES MONDES ===================== */
 function home(){tab='map';tabs();const tot=Object.values(S.done).reduce((a,b)=>a+b.st,0),nd=dueQ().length;
 app.innerHTML=hud()+`<div class="hero"><h1>Cinq <b>mondes</b>, cinq <b>boss</b>, un cours à dompter.</h1><p>Chaque niveau : un briefing avec labo, puis un combat. Bats le boss d'un monde pour ouvrir le suivant.</p></div>`
-+(nd?`<div class="tip">🧠 <b>${nd} question${nd>1?'s':''} à réviser</b> aujourd'hui. La mémoire se construit en revenant dessus au bon moment. <button class="btn cy" style="margin-top:8px;padding:8px 14px" id="gotrain">Réviser maintenant →</button></div>`:'')
++mission()
 +W.map((w,i)=>{const op=wOpen(i),st=w.l.reduce((a,li)=>a+(S.done[li]?S.done[li].st:0),0);return `<button class="world" style="--w:${w.c}" ${op?'':'disabled'} data-w="${i}"><div class="e">${op?w.e:'🔒'}</div><div><div class="num">Monde ${i+1}</div><div class="t">${w.n}</div><div class="s">${op?w.d:'Bats le boss du monde '+i+' pour ouvrir.'}</div></div><div class="st">${st} / ${w.l.length*3} ★<small>${S.boss[i]?'boss vaincu':'boss en vie'}</small></div></button>`}).join('')
 +`<div class="foot">${tot} / 42 étoiles · <button id="free">${S.free?'Verrouiller':'Tout débloquer'}</button></div>`;
-app.querySelectorAll('.world').forEach(b=>b.onclick=()=>world(+b.dataset.w));$('#free').onclick=()=>{S.free=!S.free;save();home()};const g=$('#gotrain');if(g)g.onclick=()=>{tab='train';train()}}
+app.querySelectorAll('.world').forEach(b=>b.onclick=()=>world(+b.dataset.w));$('#free').onclick=()=>{S.free=!S.free;save();home()};bindMission()}
 function world(w){tabs();const ww=W[w],all=wDone(w);
 app.innerHTML=hud()+`<div class="hero" style="--w:${ww.c}"><div class="eyebrow" style="color:${ww.c}">Monde ${w+1}</div><h1>${ww.e} ${ww.n}</h1><p>${ww.d}</p></div><div class="path" style="--w:${ww.c}">`
 +ww.l.map((li,k)=>{const l=L[li],d=S.done[li],op=lvlOpen(li),cur=op&&!d;return `<button class="node${d?' done':''}${cur?' cur':''}" ${op?'':'disabled'} data-l="${li}"><div><div class="num">Niveau ${w+1}-${k+1} · chapitre ${li}</div><div class="t">${l.t}</div><div class="s">${op?l.s:'Termine le niveau précédent.'}</div></div><div class="stars${d?'':' off'}">${d?stars(d.st):'☆☆☆'}</div></button>`}).join('')
@@ -187,7 +187,7 @@ $('#quit').onclick=()=>{clearInterval(timer);isBoss?world(w):level(o.li)};const 
 let left=TMAX;if(TMAX)timer=setInterval(()=>{left--;const t=$('#tm');if(t)t.style.width=(left/TMAX*100)+'%';if(left<=0){clearInterval(timer);answer(false,'Temps écoulé.')}},1000);
 const answer=(ok,extra)=>{clearInterval(timer);if(res.length>i)return;res[i]=ok;srUpdate(x.id,ok);S.day.n++;
 if(ok){combo++;hp--;const g=(10+Math.min(combo,5)*2)*(isBoss?2:1);xp+=g;coins+=isBoss?4:2;$('#foe').classList.add('hit');if(!hp)$('#foe').classList.add('dead');$('#foe .hp i').style.width=(hp/qs.length*100)+'%';dmgFx('−1 HP  +'+g+' XP');$('#fb').innerHTML=`<div class="fb ok"><b>Touché ! +${g} XP</b>${q.e}</div>`}
-else{combo=0;hearts--;miss.push(x);$('#fb').innerHTML=`<div class="fb"><b>Raté ${extra?'· '+extra:''}</b>${q.e}</div>`;document.querySelector('.hearts').innerHTML='❤️'.repeat(hearts)+'<span class="lost">'+'❤️'.repeat((isBoss?3:4)-hearts)+'</span>'}
+else{combo=0;hearts--;miss.push(x);$('#fb').innerHTML=`<div class="fb"><b>Raté ${extra?'· '+extra:''}</b>${q.e}${leech(x)}</div>`;document.querySelector('.hearts').innerHTML='❤️'.repeat(hearts)+'<span class="lost">'+'❤️'.repeat((isBoss?3:4)-hearts)+'</span>'}
 save();app.querySelectorAll('.opt,#val,#nin').forEach(b=>b.disabled=true);
 $('#fb').insertAdjacentHTML('beforeend',`<div class="nav" style="justify-content:flex-end"><button class="btn" id="nx">${hearts<=0?'💀 Défaite':i<qs.length-1?'Suivant →':'Résultat →'}</button></div>`);const nb=$('#nx');nb.onclick=()=>{i++;hearts<=0?result(false):i<qs.length?show():result(true)};nb.focus();nb.scrollIntoView({block:'nearest',behavior:'smooth'})};
 if(q.t==='qcm'||q.t==='vf')app.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,ok=q.t==='qcm'?k===q.a:(k===1)===q.a;b.classList.add(ok?'ok':'ko');if(!ok){const r=q.t==='qcm'?q.a:(q.a?1:0);app.querySelector(`.opt[data-k="${r}"]`).classList.add('ok')}answer(ok)});
@@ -222,7 +222,7 @@ if(q.t==='match'){st.l=shuffle(q.p.map(p=>p[0]));st.r=shuffle(q.p.map(p=>p[1]));
 app.innerHTML=hud()+`<div class="card"><div class="eyebrow" style="display:flex;justify-content:space-between"><span>${title} · ${i+1} / ${list.length}</span><span>chap. ${x.li} · ${L[x.li].t}</span></div><div class="q">${q.q}</div>${body}<div id="fb"></div></div><div class="nav"><button class="btn ghost" id="quit" style="font-size:13px;padding:8px 12px">✕ Quitter</button></div>`;
 $('#quit').onclick=train;
 const answer=(ok,extra)=>{if(res.length>i)return;res[i]=ok;srUpdate(x.id,ok);S.day.n++;if(ok){xp+=6}else miss.push(x);S.xp+=ok?6:0;save();
-$('#fb').innerHTML=`<div class="fb${ok?' ok':''}"><b>${ok?'Exact · +6 XP':'Raté '+(extra?'· '+extra:'')}</b>${q.e}</div><div class="nav" style="justify-content:flex-end"><button class="btn" id="nx">${i<list.length-1?'Suivant →':'Bilan →'}</button></div>`;
+$('#fb').innerHTML=`<div class="fb${ok?' ok':''}"><b>${ok?'Exact · +6 XP':'Raté '+(extra?'· '+extra:'')}</b>${q.e}${ok?'':leech(x)}</div><div class="nav" style="justify-content:flex-end"><button class="btn" id="nx">${i<list.length-1?'Suivant →':'Bilan →'}</button></div>`;
 app.querySelectorAll('.opt,#val,#nin').forEach(b=>b.disabled=true);const nb=$('#nx');nb.onclick=()=>{i++;i<list.length?show():done()};nb.scrollIntoView({block:'nearest',behavior:'smooth'})};
 if(q.t==='qcm'||q.t==='vf')app.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,ok=q.t==='qcm'?k===q.a:(k===1)===q.a;b.classList.add(ok?'ok':'ko');if(!ok){const r=q.t==='qcm'?q.a:(q.a?1:0);app.querySelector(`.opt[data-k="${r}"]`).classList.add('ok')}answer(ok)});
 if(q.t==='num'){const go=()=>{const v=parseFloat($('#nin').value.replace(',','.'));if(isNaN(v))return;const ok=q.tol===0?v===q.a:Math.abs(v-q.a)/Math.abs(q.a)*100<=q.tol;answer(ok,ok?'':'Attendu : '+fmt(q.a)+' '+q.u)};$('#val').onclick=go;$('#nin').onkeydown=e=>{if(e.key==='Enter')go()}}
@@ -247,6 +247,22 @@ $('#show').onclick=()=>{$('#rev').innerHTML=b.p.map(p=>`<p>${p}</p>`).join('')+(
 const grade=ok=>{const key=x.li+'.'+x.idx,t=dayN(today()),r=S.fr[key]||{n:0,iv:0,due:0};if(ok){r.n++;r.iv=r.n===1?2:r.n===2?5:Math.round(r.iv*2.2);S.xp+=8}else{r.n=0;r.iv=1}r.due=t+r.iv;S.fr[key]=r;res.push(ok);save();i++;i<list.length?show():done()};
 $('#no').onclick=()=>grade(false);$('#yes').onclick=()=>grade(true);$('#rev').scrollIntoView({block:'start',behavior:'smooth'})}};
 const done=()=>{const n=res.filter(Boolean).length;app.innerHTML=hud()+`<div class="card res"><div class="big">${n===res.length?'🧠':'📈'}</div><h2>Rappel libre</h2><p>${n} / ${res.length} briefings sus. +${n*8} XP</p><p style="color:var(--muted);font-size:14px">Ceux que tu ne savais pas reviennent demain. Les autres s'espacent.</p><div class="nav" style="justify-content:center"><button class="btn" id="ok">Retour</button></div></div>`;$('#ok').onclick=train};show()}
+
+/* ===================== MISSION DU JOUR ET RELECTURE ===================== */
+// La regularite predit la reussite plus que tout le reste : un seul ecran dit quoi faire aujourd'hui.
+function nextChapter(){for(let li=1;li<=NCH;li++)if(!S.done[li]&&lvlOpen(li))return li;return 0}
+function mission(){const nd=dueQ().length,fr=frDue().length,nx=nextChapter(),today_n=S.day.d===today()?S.day.n:0;
+ const items=[];
+ if(nd)items.push(`<button class="btn wide cy" id="m-rev">🧠 Réviser ${Math.min(nd,15)} question${nd>1?'s':''} dues${nd>15?' sur '+nd:''}</button>`);
+ if(fr)items.push(`<button class="btn wide ghost" id="m-fr">🗣️ Réciter un briefing</button>`);
+ if(nx)items.push(`<button class="btn wide ghost" id="m-nx">⚔️ Nouveau chapitre : ${nx}. ${L[nx].t}</button>`);
+ 
+ const done=!nd&&!fr&&!nx;
+ return `<div class="card"><div class="eyebrow">🎯 Mission du jour · ${today_n} réponse${today_n>1?'s':''} déjà</div><p style="color:var(--muted);font-size:14px;margin:6px 0 10px">${done?'Tout est à jour. Un examen blanc, ou une étude de cas, et c\'est gagné pour aujourd\'hui.':'Dans l\'ordre, quinze minutes suffisent. Ce qui est dû passe avant ce qui est nouveau.'}</p>${items.join('<div style="height:6px"></div>')}</div>`}
+function bindMission(){const b=(id,f)=>{const e=$(id);if(e)e.onclick=f};b('#m-rev',()=>session(dueQ().slice(0,15),'Révision du jour'));b('#m-fr',()=>recite(frDue().slice(0,5)));b('#m-nx',()=>{const li=nextChapter();if(li)level(li)});b('#m-sc',()=>scenario());b('#m-cas',()=>etudeCas())}
+// Rater trois fois la meme question, ce n'est plus un trou de memoire : on renvoie au briefing.
+function leech(x){const r=S.sr[x.id];return r&&r.f>=3?`<div style="margin-top:8px"><button class="btn ghost" id="leech" data-li="${x.li}" style="font-size:13px;padding:8px 12px">📖 Ratée ${r.f} fois : relire le briefing du chapitre ${x.li}</button></div>`:''}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#leech');if(b)brief(+b.dataset.li,0,true)});
 /* ===================== CODEX ===================== */
 function codex(){tab='codex';tabs();app.innerHTML=hud()+`<div class="hero"><h1>📖 <b>Codex</b></h1><p>Tous les briefings et labos des chapitres ouverts, à relire à tout moment. Ferme les yeux et récite avant de rouvrir.</p></div><div class="list">`
 +W.map((w,wi)=>`<div class="eyebrow" style="color:${w.c};margin-top:14px">Monde ${wi+1} · ${w.n}</div>`+w.l.map(li=>{const op=S.free||lvlOpen(li);return `<button ${op?'':'disabled'} data-l="${li}" style="${op?'':'opacity:.4'}">${L[li].t}<small>${L[li].b.map(b=>b.h).join(' · ')}</small></button>`}).join('')).join('')+'</div>';
