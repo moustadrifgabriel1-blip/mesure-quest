@@ -1,5 +1,5 @@
 /* Version incrementee par classe-backend/publier.sh a chaque publication. */
-const V='mq-v1';const FILES=['./','./index.html','./data.enc','./acces.js','./classe.js','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png'];
+const V='mq-v17';const FILES=['./','./index.html','./data.enc','./acces.js','./classe.js','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png'];
 /* Tous les fichiers d'une version sont mis en cache d'un bloc, en contournant le cache HTTP :
    jamais un index.html d'une version avec le data.enc d'une autre. */
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(FILES.map(f=>new Request(f,{cache:'reload'})))).then(()=>self.skipWaiting()))});
