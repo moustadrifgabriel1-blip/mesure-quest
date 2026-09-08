@@ -3,20 +3,32 @@
    La cle est derivee du code sur l'appareil (PBKDF2) ; elle est gardee localement
    pour ne pas redemander le code a chaque ouverture. Sans code valide, l'app
    n'affiche rien d'autre que cet ecran. Le serveur n'intervient pas.
+   Ce fichier porte aussi l'ecran de panne : sans lui, une erreur de chargement
+   donnerait un fond noir muet, impossible a diagnostiquer a distance.
    =================================================================== */
+const panne=(msg,retry)=>{if(document.getElementById('panne'))return;const d=document.createElement('div');d.id='panne';
+ d.style.cssText='position:fixed;inset:0;z-index:80;background:#0B1220;color:#E6EDF7;overflow:auto;padding:max(24px,env(safe-area-inset-top)) 18px 24px;font-family:system-ui,sans-serif';
+ d.innerHTML='<div style="max-width:480px;margin:40px auto 0;text-align:center"><div style="font-size:56px">⚠️</div><h1 style="font-size:22px;margin:8px 0">'+document.title+' ne peut pas démarrer</h1><p id="pmsg" style="color:#8A98B4;line-height:1.5"></p><button id="pre" style="width:100%;margin-top:12px;padding:16px;font-size:17px;font-weight:700;border:0;border-radius:12px;background:#FFB347;color:#1a1200">'+(retry||'Recharger')+'</button><p style="color:#8A98B4;font-size:13px;margin-top:18px">Si ça continue, envoie ce message à Gab : il saura quoi faire.</p></div>';
+ document.body.appendChild(d);d.querySelector('#pmsg').textContent=msg;d.querySelector('#pre').onclick=()=>location.reload()};
+window.addEventListener('error',e=>{if(e.message&&!/ResizeObserver|Script error/.test(e.message))panne('Erreur : '+e.message+(e.lineno?' (ligne '+e.lineno+')':''))});
 (async()=>{
 const KEYNAME='acces.cle';
 const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
-const enc=await fetch('data.enc').then(r=>r.json());
+let enc;try{enc=await fetch('data.enc',{cache:'no-cache'}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json()})}
+catch(e){panne('Contenu indisponible. Vérifie ta connexion, puis réessaie. ('+e.message+')','Réessayer');return}
 const deriver=async code=>{const raw=await crypto.subtle.importKey('raw',new TextEncoder().encode(code.trim().toUpperCase().replace(/\s+/g,'')),'PBKDF2',false,['deriveBits']);
  return new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt:b64(enc.salt),iterations:enc.it,hash:'SHA-256'},raw,256))};
 const dechiffrer=async keyBytes=>{const k=await crypto.subtle.importKey('raw',keyBytes,'AES-GCM',false,['decrypt']);
  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(enc.iv)},k,b64(enc.ct));return new TextDecoder().decode(pt)};
+/* Le contenu est controle avant de lancer le moteur : si data.js a une erreur, on
+   l'affiche au lieu de laisser le moteur planter sur « L is not defined ». */
 const demarrer=code=>{const s1=document.createElement('script');s1.text=code;document.head.appendChild(s1);
+ if(typeof L!=='object'||!L||L.length<2||typeof W==='undefined'){panne('Contenu illisible (data.js). Version du contenu : '+(enc.ver||'inconnue')+'.');return false}
  const s2=document.createElement('script');s2.text=document.getElementById('moteur').textContent;document.body.appendChild(s2);
- const s3=document.createElement('script');s3.src='classe.js';document.body.appendChild(s3);const g=document.getElementById('acces');if(g)g.remove()};
+ const s3=document.createElement('script');s3.src='classe.js';document.body.appendChild(s3);const g=document.getElementById('acces');if(g)g.remove();return true};
 let stored=null;try{stored=localStorage.getItem(KEYNAME)}catch(e){}
-if(stored){try{demarrer(await dechiffrer(b64(stored)));return}catch(e){try{localStorage.removeItem(KEYNAME)}catch(_){}}}
+if(stored){let txt=null;try{txt=await dechiffrer(b64(stored))}catch(e){try{localStorage.removeItem(KEYNAME)}catch(_){}}
+ if(txt!==null){demarrer(txt);return}}
 const ov=document.createElement('div');ov.id='acces';ov.style.cssText='position:fixed;inset:0;z-index:60;background:var(--bg,#0B1220);color:var(--fg,#E6EDF7);overflow:auto;padding:max(24px,env(safe-area-inset-top)) 18px 24px;font-family:inherit';
 ov.innerHTML=`<div style="max-width:480px;margin:0 auto;min-height:calc(100vh - 60px);display:flex;flex-direction:column;justify-content:center"><div style="font-size:64px;text-align:center;margin-bottom:10px">🔐</div><h1 style="font-size:26px;text-align:center;margin:0 0 8px">${document.title}</h1><p style="text-align:center;color:var(--muted,#8A98B4);font-size:16px;line-height:1.5;margin:0 0 24px">Cette app est réservée à la classe. Entre le code d'accès qu'on t'a donné. Il n'est demandé qu'une fois.</p>
 <input id="acode" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE-D-ACCÈS" style="width:100%;box-sizing:border-box;padding:16px;font-size:20px;text-align:center;letter-spacing:2px;border-radius:12px;border:1px solid #2a3550;background:#0a0f1a;color:inherit;font-family:ui-monospace,Menlo,monospace"><button id="aok" style="width:100%;margin-top:12px;padding:16px;font-size:17px;font-weight:700;border:0;border-radius:12px;background:#FFB347;color:#1a1200">Ouvrir</button><p id="amsg" style="text-align:center;color:#FF6B6B;min-height:22px;margin:12px 0 0"></p><p style="text-align:center;color:var(--muted,#8A98B4);font-size:13px;margin-top:18px">Le contenu est chiffré sur l'appareil. Aucun serveur ne connaît le code.</p></div>`;

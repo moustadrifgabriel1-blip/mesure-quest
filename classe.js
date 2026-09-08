@@ -13,14 +13,15 @@ let fb=null,uid=null,pending=null,dernier=0;
 // Chargement paresseux du SDK : rien n'est téléchargé tant qu'on n'a pas rejoint une classe.
 const charger=()=>new Promise((ok,ko)=>{if(fb){ok(fb);return}
  const urls=['https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js','https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js'];
- let n=0;const next=()=>{if(n===urls.length){try{firebase.initializeApp(CFG);fb=firebase;ok(fb)}catch(e){ko(e)}return}const s=document.createElement('script');s.src=urls[n++];s.onload=next;s.onerror=()=>ko(new Error('réseau'));document.head.appendChild(s)};next()});
+ let n=0;const next=()=>{if(n===urls.length){try{firebase.initializeApp(CFG);try{firebase.firestore().enablePersistence({synchronizeTabs:true}).catch(()=>{})}catch(e){}fb=firebase;ok(fb)}catch(e){ko(e)}return}const s=document.createElement('script');s.src=urls[n++];s.onload=next;s.onerror=()=>ko(new Error('réseau'));document.head.appendChild(s)};next()});
 const connecter=async()=>{const f=await charger();if(!uid){const u=await f.auth().signInAnonymously();uid=u.user.uid}return f};
 // La fiche envoyée : ce que le profil affiche déjà, rien de plus.
-const fiche=()=>{const all=[];for(let li=1;li<=NCH;li++)L[li].q.forEach((q,k)=>{const r=S.sr[li+'.'+k];if(r)all.push(r)});
+const fiche=()=>{const all=[];for(let li=1;li<=NCH;li++)L[li].q.forEach((q,k)=>{const r=S.sr[q.id];if(r)all.push(r)});
  return {pseudo:S.classe.pseudo,jeu:JEU,xp:S.xp,etoiles:Object.values(S.done).reduce((a,b)=>a+b.st,0),vues:all.length,maitrisees:all.filter(r=>r.iv>=21).length,total:TOTALQ,serie:S.streak.n,maj:Date.now()}};
-const pousser=async()=>{if(!S.classe||!S.classe.code||!navigator.onLine)return;try{const f=await connecter();await f.firestore().collection('classes').doc(S.classe.code).collection('membres').doc(uid).set(fiche());dernier=Date.now()}catch(e){}};
-// Une seule poussée par minute au plus, déclenchée par les sauvegardes du jeu.
-const oldSave=window.save;window.save=function(){oldSave.apply(this,arguments);if(S.classe&&S.classe.code&&Date.now()-dernier>60000){clearTimeout(pending);pending=setTimeout(pousser,3000)}};
+// Pas d'attente de l'accusé serveur : avec la persistance hors ligne, Firestore rejoue l'écriture au retour du réseau.
+const pousser=async()=>{if(!S.classe||!S.classe.code)return;try{const f=await connecter();f.firestore().collection('classes').doc(S.classe.code).collection('membres').doc(uid).set(fiche()).catch(()=>{});dernier=Date.now()}catch(e){}};
+// Une seule poussée par minute au plus. Le moteur appelle window.onProgres à chaque sauvegarde.
+window.onProgres=function(){if(S.classe&&S.classe.code&&Date.now()-dernier>60000){clearTimeout(pending);pending=setTimeout(pousser,3000)}};
 const code6=()=>{const a='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let c='';for(let i=0;i<6;i++)c+=a[Math.floor(Math.random()*a.length)];return c};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 /* ---------- vue Classe ---------- */
@@ -35,7 +36,7 @@ window.classe=async function(){tabs();
  app.innerHTML=hud()+`<div class="hero"><h1>👥 <b>Ma classe</b></h1><p>Code <b class="mono" style="letter-spacing:3px">${S.classe.code}</b> · donne-le à tes camarades. Ils l'entrent dans Profil, puis Ma classe.</p></div><div class="card" id="liste"><p style="color:var(--muted)">Chargement…</p></div><div class="nav"><button class="btn ghost" id="back">← Profil</button><button class="btn ghost" id="quit" style="color:var(--bad)">Quitter la classe</button></div>`;
  $('#back').onclick=profile;$('#quit').onclick=()=>{if(confirm('Quitter la classe '+S.classe.code+' ? Ta fiche y reste jusqu\'à ce que tu la rejoignes à nouveau.')){S.classe=null;save();profile()}};
  try{const f=await connecter();await pousser();const snap=await f.firestore().collection('classes').doc(S.classe.code).collection('membres').get();
-  const rows=[];snap.forEach(d=>{const x=d.data();if(x.jeu===JEU)rows.push(x)});rows.sort((a,b)=>b.xp-a.xp);
+  const rows=[];snap.forEach(d=>{const x=d.data();if(x.jeu===JEU&&Number.isFinite(x.xp)&&typeof x.pseudo==='string')rows.push(Object.assign({etoiles:0,vues:0,maitrisees:0,total:0,serie:0,maj:0},x))});rows.sort((a,b)=>b.xp-a.xp);
   const j=t=>{const d=Math.round((Date.now()-t)/864e5);return d<=0?'aujourd\'hui':d===1?'hier':'il y a '+d+' j'};
   $('#liste').innerHTML=`<div class="eyebrow">${NOM} · ${rows.length} camarade${rows.length>1?'s':''}</div>`+(rows.length?rows.map((x,i)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)"><div><b>${i===0?'🥇 ':i===1?'🥈 ':i===2?'🥉 ':''}${esc(x.pseudo)}</b>${x.pseudo===S.classe.pseudo?' <small style="color:var(--muted)">(toi)</small>':''}<br><small style="color:var(--muted)">${x.maitrisees} ancrées · ${x.vues} / ${x.total} vues · 🔥 ${x.serie} · ${j(x.maj)}</small></div><div class="mono" style="text-align:right">${x.xp} XP<br><small style="color:var(--amber)">${'★'.repeat(Math.min(5,Math.round(x.etoiles/Math.max(1,TOTETOILES)*5)))}</small></div></div>`).join(''):'<p style="color:var(--muted)">Personne d\'autre pour l\'instant. Partage le code.</p>')+`<p style="color:var(--muted);font-size:13px;margin:10px 0 0">Classement par XP. Le chiffre qui compte vraiment, c'est « ancrées » : les questions tenues plus de trois semaines.</p>`}
  catch(e){$('#liste').innerHTML='<p style="color:var(--muted)">Impossible de joindre le serveur. Vérifie le réseau.</p>'}};
