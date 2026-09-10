@@ -178,6 +178,34 @@ body:before{content:"";position:fixed;top:0;left:0;right:0;height:var(--sat);bac
 .enum{margin:4px 0 10px;padding-left:1.4em}.enum li{margin:4px 0;padding-left:2px;line-height:1.45}.enum li::marker{color:var(--accent)}p.lh{margin-bottom:2px}.dl .enum{margin:2px 0 4px;font-size:14.5px}
 .pbar{display:flex;height:10px;background:var(--line);border-radius:5px;overflow:hidden}.pbar i{display:block;height:100%;background:var(--ok)}.pbar i.s{background:var(--accent)}.pleg{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);margin-top:8px;font-variant-numeric:tabular-nums}.pleg b{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--line2);margin-right:5px}.pleg b.ok{background:var(--ok)}.pleg b.ac{background:var(--accent)}.pg{display:block;width:100%;height:auto;margin-top:6px}.pax{display:flex;justify-content:space-between;font-size:11px;color:var(--ink3);margin-top:4px}
 .fold{padding:0}.fold summary{list-style:none;cursor:pointer;padding:14px 16px;font-weight:600;font-size:15.5px;display:flex;justify-content:space-between;align-items:center}.fold summary::-webkit-details-marker{display:none}.fold summary:after{content:"";width:8px;height:8px;border-right:2px solid var(--ink3);border-bottom:2px solid var(--ink3);transform:rotate(45deg);transition:transform .2s;margin-right:4px}.fold[open] summary:after{transform:rotate(-135deg)}.fold>*:not(summary){margin-left:16px;margin-right:16px}.fold>:last-child{margin-bottom:14px}
+
+/* ===== v4.1 : profondeur et réactions ===== */
+:root{--sh:0 1px 1px rgba(20,20,30,.04),0 2px 6px rgba(20,20,30,.05),0 12px 32px rgba(20,20,30,.06);--sh2:0 2px 4px rgba(20,20,30,.06),0 18px 44px rgba(20,20,30,.12);--hl:inset 0 1px 0 rgba(255,255,255,.7)}
+@media(prefers-color-scheme:dark){:root{--sh:0 1px 0 rgba(255,255,255,.04) inset,0 8px 24px rgba(0,0,0,.35);--sh2:0 1px 0 rgba(255,255,255,.06) inset,0 20px 48px rgba(0,0,0,.5);--hl:inset 0 1px 0 rgba(255,255,255,.06)}}
+.card,.world,.node,.stat,.arena,.today,.list button,.lrow,.pill,.goal{box-shadow:var(--sh),var(--hl)}
+.card,.arena,.today{transition:box-shadow .25s}
+.world,.node,.list button,.lrow,.opt,.btn,.cta,.goal,.quest,.back,.tabbar button{transition:transform .18s cubic-bezier(.2,.8,.2,1),box-shadow .25s,background .2s,opacity .2s}
+.world:active:not(:disabled),.node:active:not(:disabled),.list button:active,.lrow:active,.goal:active{transform:scale(.975);box-shadow:0 1px 2px rgba(20,20,30,.06)}
+.btn{box-shadow:0 1px 2px rgba(0,0,0,.08),0 6px 16px color-mix(in srgb,var(--accent) 28%,transparent),inset 0 1px 0 rgba(255,255,255,.22);background-image:linear-gradient(180deg,rgba(255,255,255,.12),transparent)}
+.btn:active{transform:scale(.965);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.btn.ghost,.btn.red,.btn.sm{box-shadow:none;background-image:none}.btn.ghost:active{background:color-mix(in srgb,var(--accent) 20%,transparent)}
+.cta{background-image:linear-gradient(160deg,color-mix(in srgb,var(--accent) 84%,#fff) 0%,var(--accent) 45%,color-mix(in srgb,var(--accent) 80%,#000) 100%);box-shadow:0 2px 6px color-mix(in srgb,var(--accent) 25%,transparent),0 14px 34px color-mix(in srgb,var(--accent) 32%,transparent),inset 0 1px 0 rgba(255,255,255,.28)}
+.cta.done{background-image:none}
+.opt{box-shadow:inset 0 0 0 1px var(--line)}.opt:active:not(:disabled){transform:scale(.98);background:var(--card)}
+.opt.ok,.opt.ko,.opt.sel{box-shadow:none}
+.tabbar{box-shadow:0 -1px 0 var(--line),0 -12px 30px rgba(20,20,30,.05)}.tabbar button:active{transform:scale(.9)}
+.tabbar button b{transition:transform .25s cubic-bezier(.2,.8,.2,1)}.tabbar button.on b{transform:translateY(-1px)}
+.cele .in{box-shadow:var(--sh2)}.toast{box-shadow:var(--sh2)}
+.node.boss{box-shadow:0 12px 32px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.12)}
+.fig{box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 8px 24px rgba(0,0,0,.18)}
+.ring .fg{filter:drop-shadow(0 0 6px color-mix(in srgb,var(--accent) 45%,transparent))}
+#app.in{animation:screen .32s cubic-bezier(.2,.8,.2,1)}
+@keyframes screen{from{opacity:0;transform:translateY(10px) scale(.992)}to{opacity:1;transform:none}}
+.card>.eyebrow:first-child{margin-bottom:6px}
+/* par cœur ou dans le classeur */
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:4px 9px;border-radius:999px;background:var(--goldbg);color:#9A6200;margin:6px 0 2px}.tag .ic{width:14px;height:14px}.tag.chercher{background:var(--tint);color:var(--accent2)}
+@media(prefers-color-scheme:dark){.tag{color:var(--gold)}}
+.classeur{margin:2px 0 10px}.classeur summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:var(--accent2);padding:8px 0}.classeur summary::-webkit-details-marker{display:none}.classeur summary .ic{width:18px;height:18px}
 </style>
 </head>
 <body>
@@ -473,7 +501,7 @@ if(q.t==='vf')body=`<div class="opts"><button class="opt" data-k="1"><span class
 if(q.t==='num')body=`<div class="numin"><input id="nin" inputmode="decimal" placeholder="valeur" autocomplete="off"><span class="u">${q.u}</span><button class="btn" id="val">OK</button></div>`;
 if(q.t==='order'){st.items=shuffle(q.i);st.pick=[];body=`<p style="color:var(--muted);font-size:13px;margin:0 0 8px">Touche les étapes dans le bon ordre.</p><div class="opts order" id="ord"></div>`}
 if(q.t==='match'){st.l=shuffle(q.p.map(p=>p[0]));st.r=shuffle(q.p.map(p=>p[1]));st.sel=null;st.pairs={};body=`<p style="color:var(--muted);font-size:13px;margin:0 0 8px">Touche un terme, puis sa définition.</p><div class="match" id="mt"></div>`}
-app.innerHTML=hud()+`<div class="card"><div class="eyebrow" style="display:flex;justify-content:space-between"><span>${title} · ${i+1} / ${list.length}</span><span>chap. ${x.li} · ${L[x.li].t}</span></div><div class="q">${q.q}</div>${body}<div id="fb"></div></div><div class="nav"><button class="btn ghost sm" id="quit">Quitter</button></div>`;
+app.innerHTML=hud()+`<div class="card"><div class="eyebrow" style="display:flex;justify-content:space-between;gap:10px"><span>${title} · ${i+1} / ${list.length}</span><span>chap. ${x.li} · ${L[x.li].t}</span></div><div class="q">${q.q}</div>${body}<div id="fb"></div></div><div class="nav"><button class="btn ghost sm" id="quit">Quitter</button></div>`;
 $('#quit').onclick=train;
 const answer=(ok,extra)=>{if(res.length>i)return;res[i]=ok;srUpdate(x.id,ok);repondu(ok,q);feel(ok);if(ok){xp+=6;gainXP(6)}else miss.push(x);save();
 $('#fb').innerHTML=`<div class="fb${ok?' ok':''}"><b>${ok?'Exact · +6 XP':'Raté'+(extra&&extra[0]!=='<'?' · '+extra:'')+'</b>'+(extra&&extra[0]==='<'?extra:'')+'<b>'}</b>${fx(q.e)}${srcLine(x)}${why(x)}${ok?'':leech(x)}</div><div class="nav" style="justify-content:flex-end"><button class="btn" id="nx">${i<list.length-1?'Suivant':'Bilan'}${ic('chevR')}</button></div>`;
@@ -597,6 +625,6 @@ $('#reset').onclick=()=>{if(confirm('Tout effacer ? XP, étoiles, mémoire de r�
 newDay();bienvenue();home();pushRappels();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
-<script src="acces.js?v=mq-v25"></script>
+<script src="acces.js?v=mq-v26"></script>
 </body>
 </html>
