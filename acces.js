@@ -37,7 +37,7 @@ const dechiffrer=async keyBytes=>{const k=await crypto.subtle.importKey('raw',ke
 const demarrer=code=>{const s1=document.createElement('script');s1.text=code;document.head.appendChild(s1);
  if(typeof L!=='object'||!L||L.length<2||typeof W==='undefined'){panne('Contenu illisible (data.js). Version du contenu : '+(enc.ver||'inconnue')+'.');return false}
  const s2=document.createElement('script');s2.text=document.getElementById('moteur').textContent;document.body.appendChild(s2);
- const s3=document.createElement('script');s3.src='classe.js';document.body.appendChild(s3);const g=document.getElementById('acces');if(g)g.remove();return true};
+ const s3=document.createElement('script');s3.src='classe.js?v='+(enc.ver||'');document.body.appendChild(s3);const g=document.getElementById('acces');if(g)g.remove();return true};
 let stored=null;try{stored=localStorage.getItem(KEYNAME)}catch(e){}
 if(stored){let txt=null;try{txt=await dechiffrer(b64(stored))}catch(e){try{localStorage.removeItem(KEYNAME)}catch(_){}}
  if(txt!==null){demarrer(txt);return}}
