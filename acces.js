@@ -11,6 +11,18 @@ const panne=(msg,retry)=>{if(document.getElementById('panne'))return;const d=doc
  d.innerHTML='<div style="max-width:480px;margin:40px auto 0;text-align:center"><div style="font-size:56px">⚠️</div><h1 style="font-size:22px;margin:8px 0">'+document.title+' ne peut pas démarrer</h1><p id="pmsg" style="color:#8A98B4;line-height:1.5"></p><button id="pre" style="width:100%;margin-top:12px;padding:16px;font-size:17px;font-weight:700;border:0;border-radius:12px;background:#FFB347;color:#1a1200">'+(retry||'Recharger')+'</button><p style="color:#8A98B4;font-size:13px;margin-top:18px">Si ça continue, envoie ce message à Gab : il saura quoi faire.</p></div>';
  document.body.appendChild(d);d.querySelector('#pmsg').textContent=msg;d.querySelector('#pre').onclick=()=>location.reload()};
 window.addEventListener('error',e=>{if(e.message&&!/ResizeObserver|Script error/.test(e.message))panne('Erreur : '+e.message+(e.lineno?' (ligne '+e.lineno+')':''))});
+/* Le site ne sert plus qu'aux apps : l'app iOS charge ses fichiers par son propre schéma d'URL,
+   l'app Android (TWA) ouvre le site en mode autonome. Dans un navigateur ou une PWA iPhone, on
+   renvoie vers les apps, qui ont les rappels natifs. Sur localhost, tout reste ouvert pour les tests. */
+const natif=(()=>{const ua=navigator.userAgent,ios=/iPhone|iPad|iPod/.test(ua);if(/quest:$/.test(location.protocol))return true;if(location.hostname==='localhost')return true;
+ if(ios)return false;return matchMedia('(display-mode: standalone)').matches||document.referrer.startsWith('android-app://')})();
+if(!natif){const bq=document.title.includes('Brevet');const d=document.createElement('div');d.id='acces';
+ d.style.cssText='position:fixed;inset:0;z-index:60;background:#0B1220;color:#E6EDF7;overflow:auto;padding:max(24px,env(safe-area-inset-top)) 18px 24px;font-family:system-ui,sans-serif';
+ d.innerHTML='<div style="max-width:480px;margin:40px auto 0;text-align:center"><div style="font-size:64px">'+(bq?'🗺️':'🔬')+'</div><h1 style="font-size:26px;margin:8px 0">'+document.title+'</h1><p style="color:#8A98B4;line-height:1.5">Le jeu se joue dans l\'app iPhone ou Android, avec les rappels de révision. La version web n\'est plus proposée.</p>'
+ +'<a href="'+(bq?'https://testflight.apple.com/join/QRUTBHtZ':'https://testflight.apple.com/join/5vN3cDmD')+'" style="display:block;margin-top:16px;padding:16px;border-radius:12px;background:#FFB347;color:#1a1200;font-weight:700;text-decoration:none"> iPhone : installer via TestFlight</a>'
+ +'<a href="'+(bq?'https://play.google.com/apps/internaltest/4701358771211620104':'https://play.google.com/apps/internaltest/4701203046729725515')+'" style="display:block;margin-top:10px;padding:16px;border-radius:12px;background:#4FD1E8;color:#06202a;font-weight:700;text-decoration:none">🤖 Android : rejoindre le test Play</a>'
+ +'<p style="color:#8A98B4;font-size:13px;margin-top:18px">Le code de la classe reste le même dans l\'app.</p></div>';
+ document.body.appendChild(d);return}
 (async()=>{
 const KEYNAME='acces.cle';
 const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
