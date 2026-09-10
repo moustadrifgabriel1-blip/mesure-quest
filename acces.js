@@ -22,8 +22,8 @@ if(!natif){const bq=document.title.includes('Brevet');const d=document.createEle
  +'<a href="'+(bq?'https://testflight.apple.com/join/QRUTBHtZ':'https://testflight.apple.com/join/5vN3cDmD')+'" style="display:block;margin-top:16px;padding:16px;border-radius:12px;background:#FFB347;color:#1a1200;font-weight:700;text-decoration:none"> iPhone : installer via TestFlight</a>'
  +'<a href="'+(bq?'https://play.google.com/apps/internaltest/4701358771211620104':'https://play.google.com/apps/internaltest/4701203046729725515')+'" style="display:block;margin-top:10px;padding:16px;border-radius:12px;background:#4FD1E8;color:#06202a;font-weight:700;text-decoration:none">🤖 Android : rejoindre le test Play</a>'
  +'<p style="color:#8A98B4;font-size:13px;margin-top:18px">Le code de la classe reste le même dans l\'app.</p></div>';
- document.body.appendChild(d);return}
-(async()=>{
+ document.body.appendChild(d)}
+else (async()=>{
 const KEYNAME='acces.cle';
 const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 let enc;try{enc=await fetch('data.enc',{cache:'no-cache'}).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json()})}
