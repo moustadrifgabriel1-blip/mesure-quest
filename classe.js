@@ -46,7 +46,7 @@ window.intro=function(){const pages=JEU==='mesure'?[
  ['📖','Comment apprendre','Lis le briefing d\'un chapitre, joue avec le laboratoire, puis lance le combat sans relire. Te tromper puis lire l\'explication ancre mieux que relire dix fois.'],
  ['🧠','Réviser chaque jour','L\'onglet Réviser te ressort chaque question juste avant que tu l\'oublies. Dix minutes par jour suffisent. Le rappel libre te fait réciter à voix haute, comme à l\'oral.'],
  ['👥','Ta classe','Dans Profil, rejoins la classe de tes camarades avec un code. Vous voyez la progression des uns et des autres. Le meilleur, c\'est celui qui a le plus de questions ancrées.']]:[
- ['🗺️','Brevet Quest','Tout le brevet sauf la technique de mesure : quarante-deux chapitres, treize mondes, un boss par monde. Chaque question vient d\'un support de cours, avec sa source.'],
+ ['🗺️','Brevet Quest','Tout le brevet sauf la technique de mesure : quarante-trois chapitres, treize mondes, un boss par monde. Chaque question vient d\'un support de cours, avec sa source.'],
  ['📖','Comment apprendre','Lis le briefing, joue avec le laboratoire s\'il y en a un, puis lance le combat sans relire. Se tromper puis lire l\'explication, c\'est ça qui ancre.'],
  ['🧠','Réviser et réciter','L\'onglet Réviser ressort chaque question juste avant l\'oubli, propose des examens blancs par épreuve, et le rappel libre te fait réciter un briefing avant de le révéler.'],
  ['👥','Ta classe','Dans Profil, rejoins la classe de tes camarades avec un code à six lettres. Vous voyez la progression des uns et des autres, sans compte ni mot de passe.']];
