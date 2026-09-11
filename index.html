@@ -269,14 +269,26 @@ try{S=fusion(S,JSON.parse(localStorage.getItem(SKEY)||'{}'))}catch(e){}
 /* Un échec d'écriture (quota, navigation privée) est signalé au lieu d'être avalé :
    sinon le joueur perd une session entière sans le savoir. */
 let saveKO=false;
-const save=()=>{try{localStorage.setItem(SKEY,JSON.stringify(S));if(saveKO){saveKO=false;const b=document.getElementById('savko');if(b)b.remove()}}
+const save=()=>{S.ts=Date.now();try{localStorage.setItem(SKEY,JSON.stringify(S));if(saveKO){saveKO=false;const b=document.getElementById('savko');if(b)b.remove()}}
  catch(e){if(!saveKO){saveKO=true;const b=document.createElement('div');b.id='savko';b.style.cssText='position:fixed;left:0;right:0;top:0;z-index:70;background:#7a2222;color:#fff;padding:10px 14px;font-size:14px;text-align:center';b.textContent='Ta progression ne peut plus être enregistrée sur cet appareil (mémoire pleine ou navigation privée). Exporte ta sauvegarde depuis le profil.';document.body.appendChild(b)}}
- if(window.onProgres)try{window.onProgres()}catch(e){}};
+ if(window.onProgres)try{window.onProgres()}catch(e){}if(window.pushCloud)try{pushCloud()}catch(e){}};
 /* Date locale, pas UTC : avant 2 h du matin en heure d'été, la journée ne doit pas compter pour la veille. */
 const isoLocal=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const today=()=>isoLocal(new Date());
 /* Pont vers l'app iOS native. Absent dans Safari et dans la PWA : tout le code appelant doit rester inoffensif sans lui. */
 const BRIDGE=(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.rappels)||null;
+/* Synchronisation iCloud entre iPhone et iPad (app native seulement). La page envoie son état
+   à chaque sauvegarde ; l'app le range dans le magasin clé-valeur iCloud et renvoie ici l'état
+   venu d'un autre appareil. Règle : l'état le plus récent (S.ts) gagne. Absent dans Safari. */
+const CLOUD=(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.icloud)||null;
+let cloudMuet=false;
+window.pushCloud=function(){if(!CLOUD||cloudMuet)return;try{CLOUD.postMessage({ts:S.ts||0,state:JSON.stringify(S)})}catch(e){}};
+window.recevoirCloud=function(txt){let r;try{r=JSON.parse(txt)}catch(e){return 'illisible'}
+ if(!r||typeof r!=='object')return 'vide';const tl=S.ts||0,tr=r.ts||0;if(tr<=tl)return 'local plus récent';
+ cloudMuet=true;try{S=fusion(S,r);localStorage.setItem(SKEY,JSON.stringify(S))}finally{cloudMuet=false}
+ try{if(typeof tab!=='undefined'&&tab==='map'&&typeof home==='function')home()}catch(e){}
+ return 'appliqué '+new Date(tr).toLocaleString('fr-CH')};
+
 window.bilanRappels=(n,quand)=>{const fb=document.querySelector('#nfb');if(!fb)return;
 if(quand==='refus'){fb.style.color='var(--bad)';fb.textContent='Notifications refusées. Autorise-les dans Réglages > Mesure Quest.';return}
 if(quand==='desactive'){fb.style.color='var(--muted)';fb.textContent='Rappels désactivés.';return}
@@ -628,6 +640,6 @@ $('#reset').onclick=()=>{if(confirm('Tout effacer ? XP, étoiles, mémoire de r�
 newDay();bienvenue();home();pushRappels();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
-<script src="acces.js?v=mq-v31"></script>
+<script src="acces.js?v=mq-v32"></script>
 </body>
 </html>
