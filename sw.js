@@ -1,9 +1,11 @@
-/* Version incrementee par classe-backend/publier.sh a chaque publication. */
-const V='mq-v32';const FILES=['./','./index.html','./data.enc','./acces.js','./classe.js','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png'];
-/* Tous les fichiers d'une version sont mis en cache d'un bloc, en contournant le cache HTTP :
-   jamais un index.html d'une version avec le data.enc d'une autre. */
-self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(FILES.map(f=>new Request(f,{cache:'reload'})))).then(()=>self.skipWaiting()))});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==V).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
-/* Reseau d'abord, cache de la version installee en secours. Le cache n'est plus alimente au fil de l'eau. */
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET'||!e.request.url.startsWith(self.location.origin))return;
- e.respondWith(fetch(e.request).catch(()=>caches.match(e.request,{ignoreSearch:true}).then(r=>r||(e.request.mode==='navigate'?caches.match('./index.html'):Response.error()))))});
+/* Mesure Quest est fusionné dans Brevet Quest. Ce service worker ne sert plus qu'à se retirer
+   lui même : il vide les caches de l'ancien jeu, se désinscrit, et laisse le réseau reprendre
+   la main pour que les appareils qui avaient installé la PWA voient la page d'explication. */
+self.addEventListener('install',e=>{self.skipWaiting()});
+self.addEventListener('activate',e=>{e.waitUntil((async()=>{
+ const noms=await caches.keys();
+ await Promise.all(noms.map(n=>caches.delete(n)));
+ await self.registration.unregister();
+ const cl=await self.clients.matchAll({type:'window'});
+ cl.forEach(c=>c.navigate(c.url));
+})())});
